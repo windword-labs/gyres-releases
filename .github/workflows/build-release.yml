@@ -7,30 +7,134 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: stable-${{ github.event.client_payload.tag }}
+  cancel-in-progress: false
+
 jobs:
   package:
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
+      - name: Require PRIVATE_REPO_PAT
+        env:
+          TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            echo "Set repository secret PRIVATE_REPO_PAT (read windword-labs/jetstream)" >&2
+            exit 1
+          fi
+
       - name: Read dispatch payload
+        id: meta
         env:
           TAG: ${{ github.event.client_payload.tag }}
           SHA: ${{ github.event.client_payload.sha }}
           PLATFORM: ${{ github.event.client_payload.platform }}
         run: |
           set -euo pipefail
+          SHA="$(printf '%s' "$SHA" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           if [[ ! "${TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "client_payload.tag must be vX.Y.Z" >&2
             exit 1
           fi
-          if [[ ! "${SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "client_payload.sha must be a full SHA" >&2
             exit 1
           fi
           if [ "${PLATFORM}" != "macos-arm64" ]; then
-            echo "only macos-arm64 is in the skeleton" >&2
+            echo "only macos-arm64 is wired" >&2
             exit 1
           fi
-          echo "Would checkout windword-labs/jetstream@${SHA} (tag ${TAG})"
-          echo "Would run: wails3 package"
-          echo "Would attach Gyres.app to GitHub Release ${TAG}"
-          echo "Not wired: PRIVATE_REPO_PAT, actual package, GitHub Release."
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout jetstream
+        uses: actions/checkout@v4
+        with:
+          repository: windword-labs/jetstream
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ steps.meta.outputs.sha }}
+          fetch-depth: 0
+          path: source
+
+      - name: SHA must match tag on jetstream main
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        working-directory: source
+        run: |
+          set -euo pipefail
+          git fetch origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            "+refs/tags/${TAG}:refs/tags/${TAG}"
+          if [ "$(git rev-parse HEAD)" != "$SHA" ]; then
+            echo "checked out HEAD is not $SHA" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "SHA is not on origin/main" >&2
+            exit 1
+          fi
+          if [ "$(git rev-parse "refs/tags/${TAG}^{commit}")" != "$SHA" ]; then
+            echo "tag ${TAG} does not point at $SHA" >&2
+            exit 1
+          fi
+
+      - name: Reject an existing public Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: source/apps/desktop/go.mod
+          cache-dependency-path: |
+            source/apps/desktop/go.sum
+            source/apps/core/go.sum
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Wails CLI
+        run: |
+          set -euo pipefail
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.15
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Package Gyres
+        working-directory: source/apps/desktop
+        run: wails3 package
+
+      - name: Zip .app
+        run: |
+          set -euo pipefail
+          ditto -c -k --keepParent "source/apps/desktop/bin/Gyres.app" "Gyres-macos-arm64.zip"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          set -euo pipefail
+          NOTES="$(cat <<EOF
+          Gyres ${TAG} (unsigned macos-arm64)
+
+          - source: windword-labs/jetstream@${SHA}
+          Gatekeeper will warn: unsigned ad-hoc build.
+          EOF
+          )"
+          gh release create "$TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Gyres ${TAG}" \
+            --notes "$NOTES" \
+            Gyres-macos-arm64.zip
