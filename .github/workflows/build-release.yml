@@ -126,7 +126,8 @@ jobs:
       - name: Zip .app
         run: |
           set -euo pipefail
-          ditto -c -k --keepParent "source/apps/desktop/bin/Gyres.app" "Gyres-macos-arm64.zip"
+          ditto -c -k --keepParent "source/apps/desktop/bin/Gyres.app" "Gyres-darwin-arm64.zip"
+          shasum -a 256 "Gyres-darwin-arm64.zip" | awk '{print $1"  Gyres-darwin-arm64.zip"}' > SHA256SUMS
 
       - name: Publish release
         env:
@@ -139,11 +140,11 @@ jobs:
           Gyres ${TAG} (Developer ID, macos-arm64)
 
           - source: windword-labs/jetstream@${SHA}
-          Gatekeeper will warn: unsigned ad-hoc build.
           EOF
           )"
           gh release create "$TAG" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "Gyres ${TAG}" \
             --notes "$NOTES" \
-            Gyres-macos-arm64.zip
+            Gyres-darwin-arm64.zip \
+            SHA256SUMS
