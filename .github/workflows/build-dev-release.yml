@@ -7,25 +7,128 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: dev-${{ github.event.client_payload.sha }}
+  cancel-in-progress: false
+
 jobs:
   package:
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
+      - name: Require PRIVATE_REPO_PAT
+        env:
+          TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            echo "Set repository secret PRIVATE_REPO_PAT (read windword-labs/jetstream)" >&2
+            exit 1
+          fi
+
       - name: Read dispatch payload
+        id: meta
         env:
           SHA: ${{ github.event.client_payload.sha }}
           PLATFORM: ${{ github.event.client_payload.platform }}
         run: |
           set -euo pipefail
-          if [[ ! "${SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+          SHA="$(printf '%s' "$SHA" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "client_payload.sha must be a full SHA" >&2
             exit 1
           fi
           if [ "${PLATFORM}" != "macos-arm64" ]; then
-            echo "only macos-arm64 is in the skeleton" >&2
+            echo "only macos-arm64 is wired" >&2
             exit 1
           fi
-          echo "Would checkout windword-labs/jetstream@${SHA}"
-          echo "Would run: wails3 task package:develop"
-          echo "Would attach Gyres Dev.app to a prerelease tag dev-main-<shortsha>.<run>"
-          echo "Not wired: PRIVATE_REPO_PAT, actual package, GitHub Release."
+          SHORT="${SHA:0:7}"
+          TAG="dev-main-${SHORT}.${GITHUB_RUN_ID}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout jetstream
+        uses: actions/checkout@v4
+        with:
+          repository: windword-labs/jetstream
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ steps.meta.outputs.sha }}
+          fetch-depth: 0
+          path: source
+
+      - name: SHA must be on jetstream main
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
+        working-directory: source
+        run: |
+          set -euo pipefail
+          git fetch origin '+refs/heads/main:refs/remotes/origin/main' --force
+          if [ "$(git rev-parse HEAD)" != "$SHA" ]; then
+            echo "checked out HEAD is not $SHA" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "SHA is not on origin/main" >&2
+            exit 1
+          fi
+
+      - name: Reject an existing public Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: source/apps/desktop/go.mod
+          cache-dependency-path: |
+            source/apps/desktop/go.sum
+            source/apps/core/go.sum
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Wails CLI
+        run: |
+          set -euo pipefail
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.15
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Package Gyres Dev
+        working-directory: source/apps/desktop
+        run: wails3 task package:develop
+
+      - name: Zip .app
+        run: |
+          set -euo pipefail
+          ditto -c -k --keepParent "source/apps/desktop/bin/Gyres Dev.app" "Gyres-Dev-macos-arm64.zip"
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          TITLE: ${{ github.event.client_payload.title }}
+        run: |
+          set -euo pipefail
+          NOTES="$(cat <<EOF
+          Gyres Dev (unsigned macos-arm64)
+
+          - source: windword-labs/jetstream@${SHA}
+          - ${TITLE}
+          Gatekeeper will warn: unsigned ad-hoc build.
+          EOF
+          )"
+          gh release create "$TAG" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --prerelease \
+            --title "Gyres Dev ${TAG}" \
+            --notes "$NOTES" \
+            Gyres-Dev-macos-arm64.zip
