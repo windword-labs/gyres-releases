@@ -101,6 +101,15 @@ jobs:
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.15
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
+      - name: Import macOS signing credentials
+        env:
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK_BASE64: ${{ secrets.CSC_LINK_BASE64 }}
+        run: bash source/apps/desktop/build/darwin/ci-import-signing.sh
+
       - name: Package Gyres Dev
         working-directory: source/apps/desktop
         run: wails3 task package:develop
@@ -119,7 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           NOTES="$(cat <<EOF
-          Gyres Dev (unsigned macos-arm64)
+          Gyres Dev (Developer ID, macos-arm64)
 
           - source: windword-labs/jetstream@${SHA}
           - ${TITLE}
