@@ -1,0 +1,31 @@
+name: Build Desktop Dev Release
+
+on:
+  repository_dispatch:
+    types: [build-dev-release]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: macos-latest
+    steps:
+      - name: Read dispatch payload
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          PLATFORM: ${{ github.event.client_payload.platform }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "client_payload.sha must be a full SHA" >&2
+            exit 1
+          fi
+          if [ "${PLATFORM}" != "macos-arm64" ]; then
+            echo "only macos-arm64 is in the skeleton" >&2
+            exit 1
+          fi
+          echo "Would checkout windword-labs/jetstream@${SHA}"
+          echo "Would run: wails3 task package:develop"
+          echo "Would attach Gyres Dev.app to a prerelease tag dev-main-<shortsha>.<run>"
+          echo "Not wired: PRIVATE_REPO_PAT, actual package, GitHub Release."

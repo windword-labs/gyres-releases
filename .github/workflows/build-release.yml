@@ -1,0 +1,36 @@
+name: Build Desktop Stable Release
+
+on:
+  repository_dispatch:
+    types: [build-release]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: macos-latest
+    steps:
+      - name: Read dispatch payload
+        env:
+          TAG: ${{ github.event.client_payload.tag }}
+          SHA: ${{ github.event.client_payload.sha }}
+          PLATFORM: ${{ github.event.client_payload.platform }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "client_payload.tag must be vX.Y.Z" >&2
+            exit 1
+          fi
+          if [[ ! "${SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "client_payload.sha must be a full SHA" >&2
+            exit 1
+          fi
+          if [ "${PLATFORM}" != "macos-arm64" ]; then
+            echo "only macos-arm64 is in the skeleton" >&2
+            exit 1
+          fi
+          echo "Would checkout windword-labs/jetstream@${SHA} (tag ${TAG})"
+          echo "Would run: wails3 package"
+          echo "Would attach Gyres.app to GitHub Release ${TAG}"
+          echo "Not wired: PRIVATE_REPO_PAT, actual package, GitHub Release."
