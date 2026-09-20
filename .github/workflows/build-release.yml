@@ -26,6 +26,16 @@ jobs:
             exit 1
           fi
 
+      - name: Require UPDATER_GITHUB_TOKEN
+        env:
+          TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            echo "Set repository secret UPDATER_GITHUB_TOKEN (fine-grained PAT, gyres-releases Contents: Read)" >&2
+            exit 1
+          fi
+
       - name: Read dispatch payload
         id: meta
         env:
@@ -118,6 +128,11 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK_BASE64: ${{ secrets.CSC_LINK_BASE64 }}
         run: bash source/apps/desktop/build/darwin/ci-import-signing.sh
+
+      - name: Embed updater GitHub token
+        env:
+          UPDATER_GITHUB_TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
+        run: bash source/apps/desktop/build/darwin/ci-embed-updater-token.sh
 
       - name: Package Gyres
         working-directory: source/apps/desktop
