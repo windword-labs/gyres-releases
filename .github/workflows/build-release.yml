@@ -125,6 +125,7 @@ jobs:
           CSC_LINK_BASE64: ${{ secrets.CSC_LINK_BASE64 }}
         run: bash source/apps/desktop/build/darwin/ci-import-signing.sh
       - name: Embed updater token
+        if: matrix.os == 'darwin'
         env:
           UPDATER_GITHUB_TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
         run: bash source/apps/desktop/build/darwin/ci-embed-updater-token.sh
