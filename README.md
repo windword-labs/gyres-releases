@@ -7,6 +7,7 @@ Production packages are built concurrently from one frozen source commit:
 | macOS ARM64 | Signed and notarized app ZIP |
 | Windows amd64 / ARM64 | Unsigned installer EXE and portable ZIP |
 | Linux amd64 / ARM64 | Unsigned AppImage (Ubuntu 24.04 build baseline) |
+| Linux amd64 / ARM64 servers | Standalone Core `gyres-core-linux-<arch>.tar.gz` for machines without a desktop |
 
 Intel Macs are not supported. Dev packages remain macOS ARM64 only.
 There are no Linux deb/rpm packages, package repositories or GPG signatures.
@@ -17,8 +18,9 @@ combined `SHA256SUMS`. The manual full-SHA workflow is for packaging acceptance;
 it never publishes a release. Stable publication requires a matching lightweight
 source tag on main.
 
-Windows and Linux currently use manual package updates; macOS retains automatic
-updates. Browser CLI packaging is verified, but automatic managed Chrome
+Windows and Linux desktop packages currently use manual updates; macOS retains
+automatic updates. The standalone Linux Core updates with `core update` (checked
+against `SHA256SUMS`) and is restarted by its service manager. Browser CLI packaging is verified, but automatic managed Chrome
 provisioning is currently macOS-only. Windows ARM64 bundles the upstream x64
 browser CLI and requires Windows 11 emulation.
 
