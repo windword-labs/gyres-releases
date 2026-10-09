@@ -5,16 +5,19 @@ on:
     types: [build-dev-release]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: dev-${{ github.event.client_payload.sha }}
   cancel-in-progress: false
 
 jobs:
-  package:
-    runs-on: macos-latest
-    timeout-minutes: 45
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      tag: ${{ steps.meta.outputs.tag }}
+      matrix: ${{ steps.meta.outputs.matrix }}
     steps:
       - name: Require PRIVATE_REPO_PAT
         env:
@@ -31,6 +34,7 @@ jobs:
         env:
           SHA: ${{ github.event.client_payload.sha }}
           PLATFORM: ${{ github.event.client_payload.platform }}
+          PLATFORMS: ${{ toJSON(github.event.client_payload.platforms) }}
         run: |
           set -euo pipefail
           SHA="$(printf '%s' "$SHA" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
@@ -39,14 +43,37 @@ jobs:
             exit 1
           fi
           if [ "${PLATFORM}" != "macos-arm64" ]; then
-            echo "only macos-arm64 is wired" >&2
+            echo "client_payload.platform must be macos-arm64" >&2
+            exit 1
+          fi
+          # Older senders omit `platforms`: macOS ARM64 only.
+          if [ "$PLATFORMS" = null ]; then PLATFORMS='["macos-arm64"]'; fi
+          MATRIX="$(jq -c --argjson want "$PLATFORMS" '
+            if ($want | type) != "array" or ($want | length) == 0 then error("platforms must be a non-empty array") else . end
+            | . as $all
+            | ($want - [$all[].platform]) as $unknown
+            | if ($unknown | length) > 0 then error("unknown platforms: \($unknown)") else . end
+            | {include: [ $all[] | select(.platform as $p | $want | index($p)) ]}
+          ' <<'JSON'
+          [
+            {"platform": "macos-arm64", "runner": "macos-latest", "os": "darwin", "arch": "arm64"},
+            {"platform": "windows-amd64", "runner": "windows-2025", "os": "windows", "arch": "amd64"},
+            {"platform": "windows-arm64", "runner": "windows-11-arm", "os": "windows", "arch": "arm64"},
+            {"platform": "linux-amd64", "runner": "ubuntu-24.04", "os": "linux", "arch": "amd64"},
+            {"platform": "linux-arm64", "runner": "ubuntu-24.04-arm", "os": "linux", "arch": "arm64"}
+          ]
+          JSON
+          )"
+          if ! jq -e '.include[] | select(.platform == "macos-arm64")' <<<"$MATRIX" >/dev/null; then
+            echo "platforms must include macos-arm64 (the published Gyres Dev package)" >&2
             exit 1
           fi
           SHORT="${SHA:0:7}"
           TAG="dev-main-${SHORT}.${GITHUB_RUN_ID}"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "Dev platforms: $(jq -c '[.include[].platform]' <<<"$MATRIX")"
 
       - name: Checkout jetstream
         uses: actions/checkout@v4
@@ -84,6 +111,26 @@ jobs:
             exit 1
           fi
 
+  package:
+    needs: validate
+    name: Package ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: windword-labs/jetstream
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+          path: source
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: source/apps/desktop/go.mod
@@ -100,13 +147,26 @@ jobs:
         with:
           version: 10
 
+      - name: Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libayatana-appindicator3-dev patchelf file squashfs-tools xvfb
+
+      - name: Windows installer tools
+        if: matrix.os == 'windows'
+        run: |
+          if [ ! -f '/c/Program Files (x86)/NSIS/makensis.exe' ]; then choco install nsis -y --no-progress; fi
+          echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+
       - name: Install Wails CLI
         run: |
-          set -euo pipefail
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.15
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          go env GOPATH | sed 's|$|/bin|' >> "$GITHUB_PATH"
 
+      # macOS: unchanged Gyres Dev package (Developer ID, notarized, no updater token).
       - name: Import macOS signing credentials
+        if: matrix.os == 'darwin'
         env:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -115,29 +175,71 @@ jobs:
           CSC_LINK_BASE64: ${{ secrets.CSC_LINK_BASE64 }}
         run: bash source/apps/desktop/build/darwin/ci-import-signing.sh
 
-      - name: Package Gyres Dev
+      - name: Package Gyres Dev (macOS)
+        if: matrix.os == 'darwin'
         working-directory: source/apps/desktop
-        run: wails3 task package:develop
-
-      - name: Zip .app
         run: |
           set -euo pipefail
-          ditto -c -k --keepParent "source/apps/desktop/bin/Gyres Dev.app" "Gyres-Dev-darwin-arm64.zip"
-          shasum -a 256 "Gyres-Dev-darwin-arm64.zip" | awk '{print $1"  Gyres-Dev-darwin-arm64.zip"}' > SHA256SUMS
+          wails3 task package:develop
+          mkdir -p dist
+          ditto -c -k --keepParent "bin/Gyres Dev.app" dist/Gyres-Dev-darwin-arm64.zip
+
+      # Windows / Linux: the stable packaging scripts exactly as a stable tag
+      # would run them (they only build the production identity today), plus
+      # the stable payload check. These are a packaging check, kept as workflow
+      # artifacts, and never attached to the Gyres Dev prerelease.
+      - name: Package Windows
+        if: matrix.os == 'windows'
+        working-directory: source/apps/desktop
+        run: bash build/windows/package-windows.sh
+
+      - name: Package Linux
+        if: matrix.os == 'linux'
+        working-directory: source/apps/desktop
+        run: |
+          bash build/linux/package-appimage.sh
+          bash build/linux/package-core.sh
+
+      - name: Verify packaged payload
+        if: matrix.os != 'darwin'
+        working-directory: source/apps/desktop
+        run: python3 build/verify-package.py --platform '${{ matrix.os }}' --arch '${{ matrix.arch }}'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.platform }}
+          path: source/apps/desktop/dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [validate, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-macos-arm64
+          path: dist
 
       - name: Publish prerelease
+        working-directory: dist
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.meta.outputs.tag }}
-          SHA: ${{ steps.meta.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          SHA: ${{ needs.validate.outputs.sha }}
           TITLE: ${{ github.event.client_payload.title }}
+          CHECKED: ${{ join(fromJSON(needs.validate.outputs.matrix).include.*.platform, ', ') }}
         run: |
           set -euo pipefail
+          sha256sum Gyres-Dev-darwin-arm64.zip > SHA256SUMS
           NOTES="$(cat <<EOF
           Gyres Dev (Developer ID, macos-arm64)
 
           - source: windword-labs/jetstream@${SHA}
           - ${TITLE}
+          - packaged and verified: ${CHECKED}
           EOF
           )"
           gh release create "$TAG" \
