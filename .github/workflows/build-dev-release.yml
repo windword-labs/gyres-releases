@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$TOKEN" ]; then
-            echo "Set repository secret PRIVATE_REPO_PAT (read windword-labs/jetstream)" >&2
+            echo "Set repository secret PRIVATE_REPO_PAT (read windword-labs/gyres)" >&2
             exit 1
           fi
 
@@ -75,16 +75,16 @@ jobs:
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "Dev platforms: $(jq -c '[.include[].platform]' <<<"$MATRIX")"
 
-      - name: Checkout jetstream
+      - name: Checkout gyres
         uses: actions/checkout@v4
         with:
-          repository: windword-labs/jetstream
+          repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           ref: ${{ steps.meta.outputs.sha }}
           fetch-depth: 0
           path: source
 
-      - name: SHA must be on jetstream main
+      - name: SHA must be on gyres main
         env:
           SHA: ${{ steps.meta.outputs.sha }}
         working-directory: source
@@ -125,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: windword-labs/jetstream
+          repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           ref: ${{ needs.validate.outputs.sha }}
           persist-credentials: false
@@ -237,7 +237,7 @@ jobs:
           NOTES="$(cat <<EOF
           Gyres Dev (Developer ID, macos-arm64)
 
-          - source: windword-labs/jetstream@${SHA}
+          - source: windword-labs/gyres@${SHA}
           - ${TITLE}
           - packaged and verified: ${CHECKED}
           EOF
