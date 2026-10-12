@@ -40,7 +40,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
-          repository: windword-labs/jetstream
+          repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           ref: ${{ steps.meta.outputs.sha }}
           fetch-depth: 0
@@ -84,7 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: windword-labs/jetstream
+          repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
           ref: ${{ needs.validate.outputs.sha }}
           persist-credentials: false
@@ -180,5 +180,5 @@ jobs:
           set -euo pipefail
           files=(Gyres-darwin-arm64.zip Gyres-windows-amd64.zip Gyres-windows-amd64-installer.exe Gyres-windows-arm64.zip Gyres-windows-arm64-installer.exe Gyres-linux-amd64.AppImage Gyres-linux-arm64.AppImage gyres-core-linux-amd64.tar.gz gyres-core-linux-arm64.tar.gz)
           sha256sum "${files[@]}" > SHA256SUMS
-          printf 'Source: windword-labs/jetstream@%s\n\nmacOS ARM64: signed and notarized.\nWindows amd64/ARM64: unsigned installer and portable ZIP.\nLinux amd64/ARM64: unsigned AppImage, Ubuntu 24.04+ baseline.\nLinux amd64/ARM64 servers without a desktop: standalone Core (gyres-core-linux-*.tar.gz); run core init, see readme.txt inside.\n' "$SHA" > /tmp/notes.md
+          printf 'Source: windword-labs/gyres@%s\n\nmacOS ARM64: signed and notarized.\nWindows amd64/ARM64: unsigned installer and portable ZIP.\nLinux amd64/ARM64: unsigned AppImage, Ubuntu 24.04+ baseline.\nLinux amd64/ARM64 servers without a desktop: standalone Core (gyres-core-linux-*.tar.gz); run core init, see readme.txt inside.\n' "$SHA" > /tmp/notes.md
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Gyres $TAG" --notes-file /tmp/notes.md "${files[@]}" SHA256SUMS
