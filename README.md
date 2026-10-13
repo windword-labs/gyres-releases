@@ -28,4 +28,15 @@ Secrets:
 
 - `PRIVATE_REPO_PAT`: read the private source repository
 - `UPDATER_GITHUB_TOKEN`: Contents: Read on this public repository, embedded only in macOS production builds
+- `SPARKLE_ED_PRIVATE_KEY`: Gyres Mac Sparkle EdDSA private key (set by the owner)
 - macOS signing: `CSC_LINK_BASE64`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+
+## Gyres Mac
+
+`build-mac-release.yml` builds the native Mac app (`apps/macos` in the source repo) on
+the `xcode-27` runner: stable `mac-vX.Y.Z` Releases (never marked latest, so
+`releases/latest` stays the desktop's) and Dev prereleases `mac-dev-<sha>.<run>`.
+Each is Developer ID signed, notarized and EdDSA-signed for Sparkle; the publish job
+adds it to `mac/appcast.xml` or `mac/appcast-dev.xml` on the `appcast` branch
+(`scripts/mac-appcast.py`), which www.gyres.app serves under `/mac/`. A manual run
+with a SHA is a build check that never publishes.
