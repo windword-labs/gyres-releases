@@ -244,8 +244,14 @@ jobs:
           # /releases/latest, which must stay a desktop vX.Y.Z.
           FLAGS=(--latest=false)
           [ "$CHANNEL" = dev ] && FLAGS+=(--prerelease)
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${FLAGS[@]}" \
-            --title "$name $short_version" --notes "$NOTES" "$zip" SHA256SUMS
+          # Re-running this failed job (same run, same artifact) finds its own Release;
+          # a new run never gets here for an existing tag (validate refuses it).
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$zip" SHA256SUMS
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${FLAGS[@]}" \
+              --title "$name $short_version" --notes "$NOTES" "$zip" SHA256SUMS
+          fi
           LATEST="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           if [[ ! "$LATEST" =~ ^v[0-9] ]]; then
             echo "releases/latest is $LATEST, not a desktop release; fix it on GitHub now" >&2
