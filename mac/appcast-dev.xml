@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>Gyres Mac Dev</title>
+    <link>https://www.gyres.app/</link>
+    <description>Gyres Mac Dev</description>
+    <language>en</language>
+    <item>
+      <title>Gyres Mac Dev 0.0.0-dev.622</title>
+      <pubDate>Tue, 13 Oct 2026 17:11:21 +0000</pubDate>
+      <sparkle:version>622</sparkle:version>
+      <sparkle:shortVersionString>0.0.0-dev.622</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-4aee667.38436270959/Gyres-Mac-Dev-darwin-arm64.zip" length="5996558" type="application/octet-stream" sparkle:edSignature="mMbglNFEsIthrngR0sZ0EDJub7c9Vw/2HBCUZobey9YAv98RXKP4F++nvhRZaeAM6ezyIQxufSDyDnKj0Mv9DA==" />
+    </item>
+  </channel>
+</rss>
