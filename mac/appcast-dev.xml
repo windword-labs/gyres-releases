@@ -6,6 +6,14 @@
     <description>Gyres Mac Dev</description>
     <language>en</language>
     <item>
+      <title>Gyres Mac Dev 0.1.0-dev.751</title>
+      <pubDate>Sat, 17 Oct 2026 10:49:08 +0000</pubDate>
+      <sparkle:version>751</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-dev.751</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-8ea4a26.39026190078/Gyres-Mac-Dev-darwin-arm64.zip" length="6014614" type="application/octet-stream" sparkle:edSignature="yEmHD4uC1TycOJgoEOd2fln+V4u47Fq/anzrb5/XFjsDEdB+kjOHN5r1YpytBDB6Mk975d0ip7yI1Xe+U1a4BA==" />
+    </item>
+    <item>
       <title>Gyres Mac Dev 0.1.0-dev.638</title>
       <pubDate>Wed, 14 Oct 2026 16:27:51 +0000</pubDate>
       <sparkle:version>638</sparkle:version>
