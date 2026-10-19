@@ -110,7 +110,17 @@ jobs:
       - name: Windows installer tools
         if: matrix.os == 'windows'
         run: |
-          if [ ! -f '/c/Program Files (x86)/NSIS/makensis.exe' ]; then choco install nsis -y --no-progress; fi
+          set -euo pipefail
+          nsis='/c/Program Files (x86)/NSIS/makensis.exe'
+          [ -f "$nsis" ] || choco install nsis -y --no-progress || true
+          if [ ! -f "$nsis" ]; then
+            # choco is flaky on some runner images: fall back to the pinned official installer.
+            exe="$(cygpath -u "$RUNNER_TEMP")/nsis.exe"
+            curl -sSLf --retry 3 -o "$exe" https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11-setup.exe
+            echo "38d49f8fe09b1c332b01d0940e57b7258f4447733643273a01c59959ad9d3b0a  $exe" | sha256sum -c -
+            powershell -NoProfile -Command "Start-Process -Wait -FilePath \"$(cygpath -w "$exe")\" -ArgumentList '/S'"
+          fi
+          [ -f "$nsis" ] || { echo "::error::makensis.exe not found after choco and direct NSIS install"; exit 1; }
           echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
       - name: Install Wails CLI
         run: |
