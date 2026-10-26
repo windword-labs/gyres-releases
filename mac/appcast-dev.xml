@@ -6,6 +6,14 @@
     <description>Gyres Mac Dev</description>
     <language>en</language>
     <item>
+      <title>Gyres Mac Dev 0.1.0-dev.927</title>
+      <pubDate>Mon, 26 Oct 2026 15:05:55 +0000</pubDate>
+      <sparkle:version>927</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-dev.927</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-60c330d.40345229681/Gyres-Mac-Dev-darwin-arm64.zip" length="6242767" type="application/octet-stream" sparkle:edSignature="xtCAdsWHlj2BadLRlDuu18CfnKE0KTKVapvU6alfrNc928M58YIaKLI6/eHQUlJtytz8aoUYL3FWtFm/Y6KHAQ==" />
+    </item>
+    <item>
       <title>Gyres Mac Dev 0.1.0-dev.902</title>
       <pubDate>Fri, 23 Oct 2026 05:26:05 +0000</pubDate>
       <sparkle:version>902</sparkle:version>
@@ -76,14 +84,6 @@
       <sparkle:shortVersionString>0.1.0-dev.849</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-3e7a7e7.39539386021/Gyres-Mac-Dev-darwin-arm64.zip" length="6161874" type="application/octet-stream" sparkle:edSignature="j00a9cBfb/pUWnmz0xy8FfSp0ArmpY6IZ5OCFE5i2JDOZqh0GBnzl5Pv8BJ0ym+krjwxBkYRm7AXV6NlpteyDg==" />
-    </item>
-    <item>
-      <title>Gyres Mac Dev 0.1.0-dev.846</title>
-      <pubDate>Wed, 21 Oct 2026 02:19:11 +0000</pubDate>
-      <sparkle:version>846</sparkle:version>
-      <sparkle:shortVersionString>0.1.0-dev.846</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-6817fa1.39532107020/Gyres-Mac-Dev-darwin-arm64.zip" length="6130231" type="application/octet-stream" sparkle:edSignature="joF80Kp/IWJfCVPkW+ipUuXKOzrUUsj3jD/jXXtWG4ox2pOZnKEQnLbNlm7SWbvHAnZwovxrlgOW1UJ2VNqmCg==" />
     </item>
   </channel>
 </rss>
