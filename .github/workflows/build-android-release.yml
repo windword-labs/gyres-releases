@@ -1,0 +1,250 @@
+name: Build Gyres Android Release
+
+# Gyres Android (apps/android in windword-labs/gyres): stable `android-vX.Y.Z` builds,
+# signed with the release key, published here (never latest) and written to
+# android/latest.json on the `appcast` branch (served as www.gyres.app/android/latest.json
+# by the site Worker). Manual dispatch is a build check of one SHA: never publishes.
+run-name: Gyres Android ${{ github.event.client_payload.tag || inputs.sha }}
+
+on:
+  repository_dispatch:
+    types: [build-android-release]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full source SHA on main (build check only, never publishes)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.event.client_payload.tag || inputs.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - name: Require PRIVATE_REPO_PAT
+        env:
+          TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "Set repository secret PRIVATE_REPO_PAT (read windword-labs/gyres)" >&2
+            exit 1
+          fi
+
+      - name: Read payload
+        id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.event.client_payload.sha || inputs.sha }}
+          SOURCE_TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          set -euo pipefail
+          SHA="$(printf '%s' "$SHA" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be a full SHA" >&2; exit 1; }
+          PUBLISH=false
+          TAG=""
+          VERSION="0.0.0"
+          if [ "$EVENT" = repository_dispatch ]; then
+            PUBLISH=true
+            [[ "$SOURCE_TAG" =~ ^android-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "tag must be android-vX.Y.Z" >&2; exit 1; }
+            TAG="$SOURCE_TAG"
+            VERSION="${SOURCE_TAG#android-v}"
+          fi
+          {
+            echo "sha=$SHA"
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "publish=$PUBLISH"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout gyres
+        uses: actions/checkout@v4
+        with:
+          repository: windword-labs/gyres
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ steps.meta.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+
+      - name: Validate source
+        working-directory: source
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          PUBLISH: ${{ steps.meta.outputs.publish }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SHA"
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "SHA is not on gyres main" >&2; exit 1; }
+          if [ "$PUBLISH" = true ]; then
+            test "$(git cat-file -t "refs/tags/$TAG")" = commit || { echo "$TAG must be a lightweight tag" >&2; exit 1; }
+            test "$(git rev-parse "refs/tags/$TAG")" = "$SHA" || { echo "$TAG is not $SHA" >&2; exit 1; }
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $TAG already exists" >&2
+              exit 1
+            fi
+          fi
+
+  package:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: windword-labs/gyres
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ needs.validate.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install transcript page dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile --filter "@jetstream/transcript-page..."
+
+      - name: Build and sign
+        working-directory: source/apps/android
+        env:
+          SHA: ${{ needs.validate.outputs.sha }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          PUBLISH: ${{ needs.validate.outputs.publish }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GYRES_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GYRES_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GYRES_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          OUT_DIR: ${{ runner.temp }}/dist
+        run: |
+          set -euo pipefail
+          for v in KEYSTORE_BASE64 GYRES_ANDROID_KEYSTORE_PASSWORD GYRES_ANDROID_KEY_ALIAS GYRES_ANDROID_KEY_PASSWORD; do
+            [ -n "${!v}" ] || { echo "Set the ANDROID_* signing secrets (see gyres docs/android-release.md)" >&2; exit 1; }
+          done
+          KEYDIR="$(mktemp -d)"
+          trap 'rm -rf "$KEYDIR"' EXIT
+          export GYRES_ANDROID_KEYSTORE="$KEYDIR/release.p12"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$GYRES_ANDROID_KEYSTORE"
+          export GYRES_ANDROID_VERSION="$VERSION"
+          GYRES_ANDROID_VERSION_CODE="$(git rev-list --count "$SHA")"
+          export GYRES_ANDROID_VERSION_CODE
+          ./gradlew --no-daemon :app:assembleRelease
+          rm -rf "$KEYDIR"
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK" || { echo "no signed release APK at $APK" >&2; ls app/build/outputs/apk/release >&2 || true; exit 1; }
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --print-certs "$APK"
+          mkdir -p "$OUT_DIR"
+          cp "$APK" "$OUT_DIR/Gyres-android.apk"
+          printf 'version=%s\nversion_code=%s\n' "$VERSION" "$GYRES_ANDROID_VERSION_CODE" > "$OUT_DIR/package.env"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gyres-android
+          path: ${{ runner.temp }}/dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [validate, package]
+    if: needs.validate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: android-latest
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gyres-android
+          path: dist
+
+      - name: Publish release
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          SHA: ${{ needs.validate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          . ./package.env
+          sha256sum Gyres-android.apk > SHA256SUMS
+          NOTES="$(printf 'Gyres Android %s (%s), Android 8.0+\n\n- source: windword-labs/gyres@%s\n' "$version" "$version_code" "$SHA")"
+          # Never --latest: the desktop app, standalone Core and the site follow
+          # /releases/latest, which must stay a desktop vX.Y.Z.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber Gyres-android.apk SHA256SUMS
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --latest=false \
+              --title "Gyres Android $version" --notes "$NOTES" Gyres-android.apk SHA256SUMS
+          fi
+          LATEST="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [[ ! "$LATEST" =~ ^v[0-9] ]]; then
+            echo "releases/latest is $LATEST, not a desktop release; fix it on GitHub now" >&2
+            exit 1
+          fi
+
+      - name: Update android/latest.json
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          . dist/package.env
+          SUM="$(sha256sum dist/Gyres-android.apk | cut -d' ' -f1)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            rm -rf appcast
+            if git ls-remote --exit-code --heads origin appcast >/dev/null; then
+              git fetch -q origin appcast
+              git worktree add -q -B appcast appcast FETCH_HEAD
+            else
+              git worktree add -q --orphan -b appcast appcast
+            fi
+            python3 scripts/android-latest.py --out appcast/android/latest.json \
+              --version "$version" --version-code "$version_code" \
+              --url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/Gyres-android.apk" \
+              --sha256 "$SUM"
+            git -C appcast add android/latest.json
+            git -C appcast commit -q -m "Gyres Android $version ($version_code)"
+            if git -C appcast push -q origin appcast; then
+              echo "android/latest.json updated"
+              exit 0
+            fi
+            git worktree remove --force appcast
+            git branch -D appcast
+            sleep $((attempt * 5))
+          done
+          echo "could not push android/latest.json" >&2
+          exit 1
