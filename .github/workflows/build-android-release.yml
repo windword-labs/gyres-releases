@@ -116,7 +116,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest carries the Android SDK (ANDROID_HOME, licences accepted); Gradle
+      # fetches a missing platform itself.
+      - name: Android SDK
+        run: test -d "$ANDROID_HOME/build-tools" && ls "$ANDROID_HOME/build-tools"
 
       - uses: actions/setup-node@v5
         with:
