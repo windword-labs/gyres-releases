@@ -38,10 +38,13 @@ def main(argv):
     if os.path.exists(a.out):
         try:
             with open(a.out) as f:
-                old = json.load(f).get("versionCode", 0)
-        except (ValueError, OSError):
-            old = 0
-        if isinstance(old, int) and old > a.version_code:
+                old = json.load(f)["versionCode"]
+            if not isinstance(old, int):
+                raise ValueError
+        except (ValueError, KeyError, TypeError, OSError):
+            print(f"error: {a.out} is unreadable; fix it by hand", file=sys.stderr)
+            return 1
+        if old > a.version_code:
             print(f"error: existing versionCode {old} is newer than {a.version_code}", file=sys.stderr)
             return 1
     doc = {

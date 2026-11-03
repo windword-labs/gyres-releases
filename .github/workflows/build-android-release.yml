@@ -127,20 +127,31 @@ jobs:
         with:
           version: 10
 
-      - name: Install transcript page dependencies
+      - name: Build the transcript page (no secrets in this step)
         working-directory: source
-        run: pnpm install --frozen-lockfile --filter "@jetstream/transcript-page..."
+        run: |
+          pnpm install --frozen-lockfile --filter "@jetstream/transcript-page..."
+          pnpm --filter @jetstream/transcript-page build
 
+      - name: Build unsigned (build check)
+        if: needs.validate.outputs.publish != 'true'
+        working-directory: source/apps/android
+        run: ./gradlew --no-daemon -Pgyres.skipTranscriptBuild :app:assembleRelease
+
+      # The release key only reaches tag-validated publish runs, and the Node build
+      # above never sees it (Gradle skips the pnpm step).
       - name: Build and sign
+        if: needs.validate.outputs.publish == 'true'
         working-directory: source/apps/android
         env:
           SHA: ${{ needs.validate.outputs.sha }}
           VERSION: ${{ needs.validate.outputs.version }}
-          PUBLISH: ${{ needs.validate.outputs.publish }}
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           GYRES_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           GYRES_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           GYRES_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Public certificate fingerprint of the release key (gyres docs/android-release.md).
+          EXPECTED_CERT_SHA256: da6e48150e3215ccc05c7cf8b99d2d10407b3617a8098af9dea2a4afabdc1647
           OUT_DIR: ${{ runner.temp }}/dist
         run: |
           set -euo pipefail
@@ -154,17 +165,21 @@ jobs:
           export GYRES_ANDROID_VERSION="$VERSION"
           GYRES_ANDROID_VERSION_CODE="$(git rev-list --count "$SHA")"
           export GYRES_ANDROID_VERSION_CODE
-          ./gradlew --no-daemon :app:assembleRelease
+          ./gradlew --no-daemon -Pgyres.skipTranscriptBuild :app:assembleRelease
           rm -rf "$KEYDIR"
           APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$APK" || { echo "no signed release APK at $APK" >&2; ls app/build/outputs/apk/release >&2 || true; exit 1; }
           APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
-          "$APKSIGNER" verify --print-certs "$APK"
+          CERTS="$("$APKSIGNER" verify --print-certs "$APK")"
+          printf '%s\n' "$CERTS"
+          grep -q "certificate SHA-256 digest: $EXPECTED_CERT_SHA256" <<<"$CERTS" \
+            || { echo "APK is not signed with the Gyres release certificate" >&2; exit 1; }
           mkdir -p "$OUT_DIR"
           cp "$APK" "$OUT_DIR/Gyres-android.apk"
           printf 'version=%s\nversion_code=%s\n' "$VERSION" "$GYRES_ANDROID_VERSION_CODE" > "$OUT_DIR/package.env"
 
       - uses: actions/upload-artifact@v4
+        if: needs.validate.outputs.publish == 'true'
         with:
           name: gyres-android
           path: ${{ runner.temp }}/dist/*
