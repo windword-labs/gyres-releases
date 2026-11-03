@@ -6,6 +6,14 @@
     <description>Gyres Mac Dev</description>
     <language>en</language>
     <item>
+      <title>Gyres Mac Dev 0.10.0-dev.1005</title>
+      <pubDate>Tue, 03 Nov 2026 14:28:08 +0000</pubDate>
+      <sparkle:version>1005</sparkle:version>
+      <sparkle:shortVersionString>0.10.0-dev.1005</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-e43df5e.41653096608/Gyres-Mac-Dev-darwin-arm64.zip" length="9579735" type="application/octet-stream" sparkle:edSignature="gyvsN5p4czwXCLBacZn9kMil/xUQnQVcMzH1hG/UBaIVNZDX0s31AHHITBWJRT6AM4m0JPQTe0ha/joaYJLjBw==" />
+    </item>
+    <item>
       <title>Gyres Mac Dev 0.6.2-dev.961</title>
       <pubDate>Fri, 30 Oct 2026 18:34:53 +0000</pubDate>
       <sparkle:version>961</sparkle:version>
@@ -76,14 +84,6 @@
       <sparkle:shortVersionString>0.4.1-dev.949</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-9ae1f06.41045866921/Gyres-Mac-Dev-darwin-arm64.zip" length="7343271" type="application/octet-stream" sparkle:edSignature="9LWU5EV34jRrTtxQqW3gb865kwnlrMh5TqyJAcjnxpAxYXJXcvTAR/o55z40NkZUeiVPhNVe4UwpLlTbppTnDQ==" />
-    </item>
-    <item>
-      <title>Gyres Mac Dev 0.4.1-dev.948</title>
-      <pubDate>Fri, 30 Oct 2026 11:06:36 +0000</pubDate>
-      <sparkle:version>948</sparkle:version>
-      <sparkle:shortVersionString>0.4.1-dev.948</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-6817e62.41045229488/Gyres-Mac-Dev-darwin-arm64.zip" length="7325910" type="application/octet-stream" sparkle:edSignature="Jot7aRqTqw1Ne6+54u1Sfl5+AZ3tBgdchumfOTFGLMC6QM1UguQZ+LI+u41x2Ku67ee4jusAXVnmKGxa8fh3Dg==" />
     </item>
   </channel>
 </rss>
