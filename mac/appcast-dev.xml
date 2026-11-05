@@ -6,6 +6,14 @@
     <description>Gyres Mac Dev</description>
     <language>en</language>
     <item>
+      <title>Gyres Mac Dev 0.10.1-dev.1013</title>
+      <pubDate>Thu, 05 Nov 2026 08:23:21 +0000</pubDate>
+      <sparkle:version>1013</sparkle:version>
+      <sparkle:shortVersionString>0.10.1-dev.1013</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-fbbc411.41993564305/Gyres-Mac-Dev-darwin-arm64.zip" length="9586666" type="application/octet-stream" sparkle:edSignature="mhMnyMWdP8YLOLVTmFZrhaV0CSDJVk7VlN85RRdIrZKguCS/BKCZJJvmaYm3v/jYxRv68vN2wGltTJD+9O8HDQ==" />
+    </item>
+    <item>
       <title>Gyres Mac Dev 0.10.0-dev.1009</title>
       <pubDate>Tue, 03 Nov 2026 14:42:48 +0000</pubDate>
       <sparkle:version>1009</sparkle:version>
@@ -76,14 +84,6 @@
       <sparkle:shortVersionString>0.5.0-dev.951</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-16db7ae.41066315806/Gyres-Mac-Dev-darwin-arm64.zip" length="7468206" type="application/octet-stream" sparkle:edSignature="EM1xErLWaBNGfhg4HSejOLPDmAtbGwyXcTC7nmuS8m+A6wkEbOxle7npXnX3oLziP5bNQvvGugNNwj9I12yJCQ==" />
-    </item>
-    <item>
-      <title>Gyres Mac Dev 0.4.1-dev.950</title>
-      <pubDate>Fri, 30 Oct 2026 12:29:38 +0000</pubDate>
-      <sparkle:version>950</sparkle:version>
-      <sparkle:shortVersionString>0.4.1-dev.950</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-dev-daf9c12.41055290518/Gyres-Mac-Dev-darwin-arm64.zip" length="7350922" type="application/octet-stream" sparkle:edSignature="dbesqbV8CN7fbnGOeLt+bQuYcsWyAR7CDN2PByBqndNuDXaziKHQK0pU0GB9NxfiC5nxWpK6cdD/Is0dFCNbBQ==" />
     </item>
   </channel>
 </rss>
