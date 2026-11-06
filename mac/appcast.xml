@@ -6,6 +6,14 @@
     <description>Gyres Mac</description>
     <language>en</language>
     <item>
+      <title>Gyres Mac 0.12.0</title>
+      <pubDate>Fri, 06 Nov 2026 11:27:21 +0000</pubDate>
+      <sparkle:version>1032</sparkle:version>
+      <sparkle:shortVersionString>0.12.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-v0.12.0/Gyres-Mac-darwin-arm64.zip" length="9591248" type="application/octet-stream" sparkle:edSignature="1gQG3oJ5htFDajzRmtCcm1BbmzDgOG0tCbAzFP7JnlvzQuAoaROjB57J2+jIxIteSbNMyeBbls57W6HXxp6NAw==" />
+    </item>
+    <item>
       <title>Gyres Mac 0.11.0</title>
       <pubDate>Fri, 06 Nov 2026 05:30:53 +0000</pubDate>
       <sparkle:version>1023</sparkle:version>
@@ -76,14 +84,6 @@
       <sparkle:shortVersionString>0.7.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-v0.7.2/Gyres-Mac-darwin-arm64.zip" length="9426347" type="application/octet-stream" sparkle:edSignature="idthQKFyFymhLXdyiDHqJM0Qp/gGsYDdiEmMg/hcMqfzZ7vA0ERlIYIgcP4BPmsgHAB7J93MnyHXULSQG/OwDw==" />
-    </item>
-    <item>
-      <title>Gyres Mac 0.7.1</title>
-      <pubDate>Sat, 31 Oct 2026 15:13:51 +0000</pubDate>
-      <sparkle:version>966</sparkle:version>
-      <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/windword-labs/gyres-releases/releases/download/mac-v0.7.1/Gyres-Mac-darwin-arm64.zip" length="9429063" type="application/octet-stream" sparkle:edSignature="f/wZZS50MjGUJUET85eTTCjfO94kklPAlWDWvVHBUm7s2h7YsvhWl/Qy5VU8bjGAlx/tzpur+b1l2P2HpZ4zCw==" />
     </item>
   </channel>
 </rss>
