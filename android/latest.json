@@ -1,7 +1,7 @@
 {
-  "version": "0.2.0",
-  "versionCode": 1012,
-  "url": "https://github.com/windword-labs/gyres-releases/releases/download/android-v0.2.0/Gyres-android.apk",
-  "sha256": "c4281cea5649f506d40e75f2da86664d27b98c79e21e0384b524e91104d2bb50",
-  "published": "2026-11-04T03:06:45Z"
+  "version": "0.2.1",
+  "versionCode": 1032,
+  "url": "https://github.com/windword-labs/gyres-releases/releases/download/android-v0.2.1/Gyres-android.apk",
+  "sha256": "2a927bb98a2257c1a973aa13f1571dc5576204ce72c9e71589a9eb4f74985787",
+  "published": "2026-11-06T11:27:41Z"
 }
