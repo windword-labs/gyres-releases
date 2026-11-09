@@ -7,10 +7,12 @@ Production packages are built concurrently from one frozen source commit:
 | macOS ARM64 | Signed and notarized app ZIP |
 | Windows amd64 / ARM64 | Unsigned installer EXE and portable ZIP |
 | Linux amd64 / ARM64 | Unsigned AppImage (Ubuntu 24.04 build baseline) |
+| Linux amd64 / ARM64 packages | Unsigned `.deb` (Ubuntu 24.04+, Debian 13+) and `.rpm` (Fedora 40+), using the system GTK 4 / WebKitGTK 6.0 |
 | Linux amd64 / ARM64 servers | Standalone Core `gyres-core-linux-<arch>.tar.gz` for machines without a desktop |
 
 Intel Macs are not supported. Dev packages remain macOS ARM64 only.
-There are no Linux deb/rpm packages, package repositories or GPG signatures.
+The Linux `.deb` / `.rpm` files are Release assets only: no APT/YUM repositories,
+no GPG signatures, no in-app updates. Install a newer package to update.
 
 Individual successful builds are available as Actions artifacts immediately.
 A production release is published only after every platform passes, with a

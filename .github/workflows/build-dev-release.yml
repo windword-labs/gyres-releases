@@ -151,7 +151,7 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libayatana-appindicator3-dev patchelf file squashfs-tools xvfb
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libayatana-appindicator3-dev patchelf file squashfs-tools xvfb rpm
 
       - name: Windows installer tools
         if: matrix.os == 'windows'
@@ -208,6 +208,7 @@ jobs:
         working-directory: source/apps/desktop
         run: |
           bash build/linux/package-appimage.sh
+          bash build/linux/package-native.sh
           bash build/linux/package-core.sh
 
       - name: Verify packaged payload
