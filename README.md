@@ -16,7 +16,13 @@ no GPG signatures, no in-app updates. Install a newer package to update.
 
 Individual successful builds are available as Actions artifacts immediately.
 A production release is published only after every platform passes, with a
-combined `SHA256SUMS`. The manual full-SHA workflow is for packaging acceptance;
+combined `SHA256SUMS` and `SHA256SUMS.sig`, a raw Ed25519 signature over the
+exact bytes of `SHA256SUMS` (`scripts/sign-sha256sums.sh`). Before anything is
+published the signature must verify with one of the public keys in
+`packages/appdata/releasesig/keys` of the source at the release SHA, the keys
+the updaters embed; a missing secret or a mismatch fails the run. Dev
+prereleases are signed the same way. Check a download with OpenSSL 3:
+`openssl pkeyutl -verify -rawin -pubin -inkey primary.pem -in SHA256SUMS -sigfile SHA256SUMS.sig`. The manual full-SHA workflow is for packaging acceptance;
 it never publishes a release. Stable publication requires a matching lightweight
 source tag on main.
 
@@ -30,6 +36,7 @@ Secrets:
 
 - `PRIVATE_REPO_PAT`: read the private source repository
 - `UPDATER_GITHUB_TOKEN`: Contents: Read on this public repository, embedded only in macOS production builds
+- `RELEASE_ED25519_PRIVATE_KEY`: Ed25519 PEM private key that signs `SHA256SUMS` (set by the owner; its public half is `keys/primary.pem` in the source)
 - `SPARKLE_ED_PRIVATE_KEY`: Gyres Mac Sparkle EdDSA private key (set by the owner)
 - macOS signing: `CSC_LINK_BASE64`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
 
