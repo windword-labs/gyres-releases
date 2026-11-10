@@ -169,19 +169,45 @@ jobs:
           path: source/apps/desktop/dist/*
           if-no-files-found: error
           retention-days: 7
+  # Checksums and signs on every run, so a manual `sha` run exercises the
+  # signing secret and the source's keys; only a tag dispatch publishes.
   publish:
     needs: [validate, package]
-    if: github.event_name == 'repository_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: releases
+          persist-credentials: false
+      - name: Read the release public keys at the source SHA
+        uses: actions/checkout@v4
+        with:
+          repository: windword-labs/gyres
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+          path: source
+          sparse-checkout: packages/appdata/releasesig/keys
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
         with:
           pattern: package-*
           merge-multiple: true
           path: dist
+      - name: Checksum and sign
+        working-directory: dist
+        env:
+          RELEASE_ED25519_PRIVATE_KEY: ${{ secrets.RELEASE_ED25519_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          files=(Gyres-darwin-arm64.zip Gyres-windows-amd64.zip Gyres-windows-amd64-installer.exe Gyres-windows-arm64.zip Gyres-windows-arm64-installer.exe Gyres-linux-amd64.AppImage Gyres-linux-arm64.AppImage Gyres-linux-amd64.deb Gyres-linux-arm64.deb Gyres-linux-amd64.rpm Gyres-linux-arm64.rpm gyres-core-linux-amd64.tar.gz gyres-core-linux-arm64.tar.gz)
+          sha256sum "${files[@]}" > SHA256SUMS
+          bash ../releases/scripts/sign-sha256sums.sh . ../source/packages/appdata/releasesig/keys
+          cat SHA256SUMS
       - name: Publish complete release
+        if: github.event_name == 'repository_dispatch'
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
@@ -190,6 +216,5 @@ jobs:
         run: |
           set -euo pipefail
           files=(Gyres-darwin-arm64.zip Gyres-windows-amd64.zip Gyres-windows-amd64-installer.exe Gyres-windows-arm64.zip Gyres-windows-arm64-installer.exe Gyres-linux-amd64.AppImage Gyres-linux-arm64.AppImage Gyres-linux-amd64.deb Gyres-linux-arm64.deb Gyres-linux-amd64.rpm Gyres-linux-arm64.rpm gyres-core-linux-amd64.tar.gz gyres-core-linux-arm64.tar.gz)
-          sha256sum "${files[@]}" > SHA256SUMS
           printf 'Source: windword-labs/gyres@%s\n\nmacOS ARM64: signed and notarized.\nWindows amd64/ARM64: unsigned installer and portable ZIP.\nLinux amd64/ARM64: unsigned AppImage, Ubuntu 24.04+ baseline.\nLinux amd64/ARM64 .deb (Ubuntu 24.04+, Debian 13+) and .rpm (Fedora 40+): unsigned, system GTK 4 / WebKitGTK 6.0; update by installing a newer package.\nLinux amd64/ARM64 servers without a desktop: standalone Core (gyres-core-linux-*.tar.gz); run core init, see readme.txt inside.\n' "$SHA" > /tmp/notes.md
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Gyres $TAG" --notes-file /tmp/notes.md "${files[@]}" SHA256SUMS
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Gyres $TAG" --notes-file /tmp/notes.md "${files[@]}" SHA256SUMS SHA256SUMS.sig

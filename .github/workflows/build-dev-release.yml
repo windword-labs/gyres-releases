@@ -229,10 +229,35 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: releases
+          persist-credentials: false
+
+      - name: Read the release public keys at the source SHA
+        uses: actions/checkout@v4
+        with:
+          repository: windword-labs/gyres
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+          path: source
+          sparse-checkout: packages/appdata/releasesig/keys
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v4
         with:
           name: package-macos-arm64
           path: dist
+
+      - name: Checksum and sign
+        working-directory: dist
+        env:
+          RELEASE_ED25519_PRIVATE_KEY: ${{ secrets.RELEASE_ED25519_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          sha256sum Gyres-Dev-darwin-arm64.zip > SHA256SUMS
+          bash ../releases/scripts/sign-sha256sums.sh . ../source/packages/appdata/releasesig/keys
 
       - name: Publish prerelease
         working-directory: dist
@@ -244,7 +269,6 @@ jobs:
           CHECKED: ${{ join(fromJSON(needs.validate.outputs.matrix).include.*.platform, ', ') }}
         run: |
           set -euo pipefail
-          sha256sum Gyres-Dev-darwin-arm64.zip > SHA256SUMS
           NOTES="$(cat <<EOF
           Gyres Dev (Developer ID, macos-arm64)
 
@@ -259,4 +283,5 @@ jobs:
             --title "Gyres Dev ${TAG}" \
             --notes "$NOTES" \
             Gyres-Dev-darwin-arm64.zip \
-            SHA256SUMS
+            SHA256SUMS \
+            SHA256SUMS.sig
