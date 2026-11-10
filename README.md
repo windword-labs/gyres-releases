@@ -22,8 +22,10 @@ published the signature must verify with one of the public keys in
 `packages/appdata/releasesig/keys` of the source at the release SHA, the keys
 the updaters embed; a missing secret or a mismatch fails the run. Dev
 prereleases are signed the same way. From windword-labs/gyres#2069 on, the
-macOS updater and the standalone Core refuse a release without a valid
+desktop app's macOS updater and the standalone Core refuse a release without a valid
 `SHA256SUMS.sig` (no override), so never publish one by hand without it.
+Gyres Mac and Android Releases are not signed this way (Sparkle has its own
+EdDSA signature; neither is `releases/latest`).
 Check a download with OpenSSL 3:
 
 ```sh
