@@ -21,14 +21,24 @@ exact bytes of `SHA256SUMS` (`scripts/sign-sha256sums.sh`). Before anything is
 published the signature must verify with one of the public keys in
 `packages/appdata/releasesig/keys` of the source at the release SHA, the keys
 the updaters embed; a missing secret or a mismatch fails the run. Dev
-prereleases are signed the same way. Check a download with OpenSSL 3:
-`openssl pkeyutl -verify -rawin -pubin -inkey primary.pem -in SHA256SUMS -sigfile SHA256SUMS.sig`. The manual full-SHA workflow is for packaging acceptance;
-it never publishes a release. Stable publication requires a matching lightweight
-source tag on main.
+prereleases are signed the same way. From windword-labs/gyres#2069 on, the
+desktop app's macOS updater and the standalone Core refuse a release without a valid
+`SHA256SUMS.sig` (no override), so never publish one by hand without it.
+Gyres Mac and Android Releases are not signed this way (Sparkle has its own
+EdDSA signature; neither is `releases/latest`).
+Check a download with OpenSSL 3:
+
+```sh
+openssl pkeyutl -verify -rawin -pubin -inkey primary.pem -in SHA256SUMS -sigfile SHA256SUMS.sig
+```
+
+The manual full-SHA workflow is for packaging acceptance; it checksums and
+signs (so it exercises the secret) but never publishes a release. Stable
+publication requires a matching lightweight source tag on main.
 
 Windows and Linux desktop packages currently use manual updates; macOS retains
 automatic updates. The standalone Linux Core updates with `core update` (checked
-against `SHA256SUMS`) and is restarted by its service manager. Browser CLI packaging is verified, but automatic managed Chrome
+against the signed `SHA256SUMS`) and is restarted by its service manager. Browser CLI packaging is verified, but automatic managed Chrome
 provisioning is currently macOS-only. Windows ARM64 bundles the upstream x64
 browser CLI and requires Windows 11 emulation.
 
