@@ -87,7 +87,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout gyres
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
@@ -125,7 +125,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: windword-labs/gyres
           token: ${{ secrets.PRIVATE_REPO_PAT }}
@@ -218,7 +218,7 @@ jobs:
       group: mac-appcast-${{ needs.validate.outputs.channel }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
