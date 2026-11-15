@@ -218,3 +218,15 @@ jobs:
           files=(Gyres-darwin-arm64.zip Gyres-windows-amd64.zip Gyres-windows-amd64-installer.exe Gyres-windows-arm64.zip Gyres-windows-arm64-installer.exe Gyres-linux-amd64.AppImage Gyres-linux-arm64.AppImage Gyres-linux-amd64.deb Gyres-linux-arm64.deb Gyres-linux-amd64.rpm Gyres-linux-arm64.rpm gyres-core-linux-amd64.tar.gz gyres-core-linux-arm64.tar.gz)
           printf 'Source: windword-labs/gyres@%s\n\nmacOS ARM64: signed and notarized.\nWindows amd64/ARM64: unsigned installer and portable ZIP.\nLinux amd64/ARM64: unsigned AppImage, Ubuntu 24.04+ baseline.\nLinux amd64/ARM64 .deb (Ubuntu 24.04+, Debian 13+) and .rpm (Fedora 40+): unsigned, system GTK 4 / WebKitGTK 6.0; update by installing a newer package.\nLinux amd64/ARM64 servers without a desktop: standalone Core (gyres-core-linux-*.tar.gz); run core init, see readme.txt inside.\n' "$SHA" > /tmp/notes.md
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Gyres $TAG" --notes-file /tmp/notes.md "${files[@]}" SHA256SUMS SHA256SUMS.sig
+
+  # GITHUB_TOKEN release creates do not trigger on: release (GitHub recursion
+  # prevention). Notify from here with the tag we just published.
+  notify:
+    needs: [validate, publish]
+    if: github.event_name == 'repository_dispatch' && needs.publish.result == 'success'
+    uses: ./.github/workflows/notify-stable-release.yml
+    with:
+      tag: ${{ needs.validate.outputs.tag }}
+      sha: ${{ needs.validate.outputs.sha }}
+    secrets:
+      GYRES_BOT_WEBHOOK_KEY: ${{ secrets.GYRES_BOT_WEBHOOK_KEY }}

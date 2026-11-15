@@ -49,6 +49,24 @@ Secrets:
 - `RELEASE_ED25519_PRIVATE_KEY`: Ed25519 PEM private key that signs `SHA256SUMS` (set by the owner; its public half is `keys/primary.pem` in the source)
 - `SPARKLE_ED_PRIVATE_KEY`: Gyres Mac Sparkle EdDSA private key (set by the owner)
 - macOS signing: `CSC_LINK_BASE64`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+- `GYRES_BOT_WEBHOOK_KEY`: Grok Bot webhook sender key (notify-stable-release.yml only; never log or paste it)
+
+## Stable release notifications
+
+`notify-stable-release.yml` wakes a Grok Bot routine for **stable** desktop tags `vX.Y.Z` (including patches) and Gyres Mac tags `mac-vX.Y.Z`. Drafts, prereleases, Dev/alpha/beta/rc tags, Android (`android-v*`), and other tags are ignored. Publishing itself is unchanged.
+
+Desktop and Mac Releases are created with `GITHUB_TOKEN` (`github.token`). GitHub will **not** start another `on: release` workflow from those events, so the stable desktop and Mac publish jobs call this reusable workflow after a successful publish and it GETs the real release from the GitHub API. `on: release` (`published` / `released`) remains only for a human/UI (or PAT) publication or a prerelease→stable promotion. There is no cron, polling, or extra token.
+
+Setup:
+
+- Repository Actions secret (already saved): `GYRES_BOT_WEBHOOK_KEY`
+- Webhook URL configured in `scripts/notify_stable_release.py` (fixed; never taken from a release payload): `https://api2.cursor.sh/automations/webhook/838531b3-2323-58c4-8bfd-c4fa0525e42f`
+
+After merge, probe once: Actions → **Notify stable release** → Run workflow. That POSTs `{"action":"probe",...}` only. HTTP 200 means the routine woke, not that it finished. The probe is ignored by the receiver and does not tweet. A later real `v*` / `mac-v*` publish should show a **notify** job on that build workflow.
+
+This only drafts a notification. Posting on X needs a separate per-post confirmation and a separately verified independent X account, never the main account.
+
+Local checks (no live webhook): `python3 scripts/test_notify_stable_release.py`
 
 ## Gyres Mac
 

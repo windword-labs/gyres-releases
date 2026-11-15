@@ -300,3 +300,15 @@ jobs:
           done
           echo "could not push the appcast" >&2
           exit 1
+
+  # GITHUB_TOKEN release creates do not trigger on: release (GitHub recursion
+  # prevention). Notify from here for stable mac-v* only (not mac-dev).
+  notify:
+    needs: [validate, publish]
+    if: needs.validate.outputs.publish == 'true' && needs.validate.outputs.channel == 'stable' && needs.publish.result == 'success'
+    uses: ./.github/workflows/notify-stable-release.yml
+    with:
+      tag: ${{ needs.validate.outputs.tag }}
+      sha: ${{ needs.validate.outputs.sha }}
+    secrets:
+      GYRES_BOT_WEBHOOK_KEY: ${{ secrets.GYRES_BOT_WEBHOOK_KEY }}

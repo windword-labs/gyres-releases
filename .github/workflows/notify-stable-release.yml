@@ -1,0 +1,61 @@
+name: Notify stable release
+
+# Desktop and Mac publish jobs create Releases with `github.token`
+# (GITHUB_TOKEN). GitHub does not start a new workflow from events that
+# GITHUB_TOKEN caused, including `release` published/released
+# (docs.github.com: triggering a workflow from a workflow). Those jobs
+# therefore `uses:` this file after a successful publish; this job then GETs
+# the real release from the GitHub API (not a URL from the payload).
+# `on: release` still covers human/UI (or PAT) publication and
+# prerelease→stable promotion, which are not GITHUB_TOKEN events.
+# `workflow_dispatch` is a connectivity probe (action=probe), not a release.
+# Duplicate deliveries are serialized by tag/release.id; the receiver also
+# verifies the GitHub release and dedupes by repository+release.id.
+# Best-effort, not exactly-once.
+#
+# github.event_name in a reusable workflow is the *caller's* event
+# (repository_dispatch here), not workflow_call. Detect that path by
+# inputs.tag; the script fetches the release when RELEASE_TAG is set.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (vX.Y.Z or mac-vX.Y.Z)
+        required: true
+        type: string
+      sha:
+        description: Source commit SHA if known
+        required: false
+        type: string
+        default: ""
+    secrets:
+      GYRES_BOT_WEBHOOK_KEY:
+        required: true
+  release:
+    types: [published, released]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-stable-release-${{ inputs.tag || github.event.release.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository == 'windword-labs/gyres-releases' && (github.event_name == 'workflow_dispatch' || inputs.tag != '' || (github.event_name == 'release' && github.event.release.draft == false && github.event.release.prerelease == false))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Notify Grok Bot
+        env:
+          GYRES_BOT_WEBHOOK_KEY: ${{ secrets.GYRES_BOT_WEBHOOK_KEY }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/notify_stable_release.py
