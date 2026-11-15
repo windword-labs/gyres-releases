@@ -12,6 +12,10 @@ name: Notify stable release
 # Duplicate deliveries are serialized by tag/release.id; the receiver also
 # verifies the GitHub release and dedupes by repository+release.id.
 # Best-effort, not exactly-once.
+#
+# github.event_name in a reusable workflow is the *caller's* event
+# (repository_dispatch here), not workflow_call. Detect that path by
+# inputs.tag; the script fetches the release when RELEASE_TAG is set.
 
 on:
   workflow_call:
@@ -41,7 +45,7 @@ concurrency:
 
 jobs:
   notify:
-    if: github.repository == 'windword-labs/gyres-releases' && (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'release' && github.event.release.draft == false && github.event.release.prerelease == false))
+    if: github.repository == 'windword-labs/gyres-releases' && (github.event_name == 'workflow_dispatch' || inputs.tag != '' || (github.event_name == 'release' && github.event.release.draft == false && github.event.release.prerelease == false))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

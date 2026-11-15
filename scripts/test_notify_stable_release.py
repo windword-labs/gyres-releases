@@ -376,7 +376,7 @@ class WorkflowFileTest(unittest.TestCase):
         self.assertIn("github.event.release.id", self.text)
         self.assertIn("inputs.tag", self.text)
         self.assertIn("windword-labs/gyres-releases", self.text)
-        self.assertIn("workflow_call", self.text)
+        self.assertIn("inputs.tag != ''", self.text)
         self.assertIn("github.event.release.draft == false", self.text)
         self.assertIn("github.event.release.prerelease == false", self.text)
 
@@ -492,9 +492,9 @@ class WorkflowCallTest(unittest.TestCase):
             )
         return code, out.getvalue(), err.getvalue()
 
-    def env_for(self, tag="v0.121.3", **extra):
+    def env_for(self, tag="v0.121.3", event_name="workflow_call", **extra):
         env = {
-            "GITHUB_EVENT_NAME": "workflow_call",
+            "GITHUB_EVENT_NAME": event_name,
             "RELEASE_TAG": tag,
             "SOURCE_SHA": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             "GITHUB_TOKEN": "ghs_test_github_token",
@@ -502,6 +502,27 @@ class WorkflowCallTest(unittest.TestCase):
         }
         env.update(extra)
         return env
+
+    def test_caller_repository_dispatch_with_tag_fetches_and_posts(self):
+        # Reusable workflows expose the caller's event_name, not workflow_call.
+        code, out, err = self.run_script(
+            self.env_for(event_name="repository_dispatch")
+        )
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.gets), 1)
+        self.assertEqual(self.posts[0]["hostname"], "api2.cursor.sh")
+        payload = json.loads(self.posts[0]["body"])
+        self.assertEqual(payload["release"]["tag_name"], "v0.121.3")
+        self.assertNotIn(FAKE_KEY, out + err)
+
+    def test_repository_dispatch_without_tag_skips(self):
+        env = self.env_for(event_name="repository_dispatch")
+        env.pop("RELEASE_TAG")
+        code, out, err = self.run_script(env)
+        self.assertEqual(code, 0, err)
+        self.assertIn("skip:", out)
+        self.assertEqual(self.gets, [])
+        self.assertEqual(self.posts, [])
 
     def test_workflow_call_fetches_api_and_posts_fixed_webhook(self):
         code, out, err = self.run_script(self.env_for())

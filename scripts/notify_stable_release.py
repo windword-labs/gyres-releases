@@ -240,8 +240,15 @@ def load_event(path):
 def run(env=None, sender=send_post, github_getter=github_get):
     env = os.environ if env is None else env
     event_name = env.get("GITHUB_EVENT_NAME", "")
-    if event_name == "workflow_dispatch":
+    tag = env.get("RELEASE_TAG", "")
+    # Reusable workflows keep the caller's event_name (repository_dispatch for
+    # the desktop/Mac publish jobs). A non-empty RELEASE_TAG is the caller.
+    if event_name == "workflow_dispatch" and not tag:
         kind, payload = "probe", probe_payload()
+    elif tag:
+        kind, payload = fetch_release_event(
+            tag, env.get("GITHUB_TOKEN", ""), getter=github_getter
+        )
     elif event_name == "release":
         path = env.get("GITHUB_EVENT_PATH", "")
         if not path:
@@ -253,12 +260,6 @@ def run(env=None, sender=send_post, github_getter=github_get):
             print("invalid GITHUB_EVENT_PATH", file=sys.stderr)
             return 1
         kind, payload = classify(event_name, event)
-    elif event_name == "workflow_call":
-        kind, payload = fetch_release_event(
-            env.get("RELEASE_TAG", ""),
-            env.get("GITHUB_TOKEN", ""),
-            getter=github_getter,
-        )
     else:
         kind, payload = "skip", "event"
 
