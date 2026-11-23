@@ -143,9 +143,11 @@ jobs:
         with:
           version: 10
 
-      - name: Install transcript page dependencies
+      # The app bundles the transcript page and, since gyres#2450, the Web app in embed mode
+      # (apps/web/scripts/xcode-bundle-embed.sh needs apps/web/node_modules).
+      - name: Install transcript page and Web dependencies
         working-directory: source
-        run: pnpm install --frozen-lockfile --filter "@jetstream/transcript-page..."
+        run: pnpm install --frozen-lockfile --filter "@jetstream/transcript-page..." --filter "@jetstream/web..."
 
       - name: Import macOS signing credentials
         env:
