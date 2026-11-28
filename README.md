@@ -45,7 +45,7 @@ browser CLI and requires Windows 11 emulation.
 Secrets:
 
 - `PRIVATE_REPO_PAT`: read the private source repository
-- `UPDATER_GITHUB_TOKEN`: Contents: Read on this public repository, embedded only in macOS production builds
+- `UPDATER_GITHUB_TOKEN`: Contents: Read on this public repository, embedded in macOS and Windows production builds (the platforms with an in-app updater; not Dev, not Linux)
 - `RELEASE_ED25519_PRIVATE_KEY`: Ed25519 PEM private key that signs `SHA256SUMS` (set by the owner; its public half is `keys/primary.pem` in the source)
 - `SPARKLE_ED_PRIVATE_KEY`: Gyres Mac Sparkle EdDSA private key (set by the owner)
 - macOS signing: `CSC_LINK_BASE64`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
