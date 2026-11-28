@@ -135,8 +135,9 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK_BASE64: ${{ secrets.CSC_LINK_BASE64 }}
         run: bash source/apps/desktop/build/darwin/ci-import-signing.sh
+      # The in-app updater runs on macOS and installed Windows copies; Linux has none.
       - name: Embed updater token
-        if: matrix.os == 'darwin'
+        if: matrix.os == 'darwin' || matrix.os == 'windows'
         env:
           UPDATER_GITHUB_TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
         run: bash source/apps/desktop/build/darwin/ci-embed-updater-token.sh
@@ -160,6 +161,9 @@ jobs:
           bash build/linux/package-appimage.sh
           bash build/linux/package-native.sh
           bash build/linux/package-core.sh
+      - name: Check updater token embedded
+        if: matrix.os == 'darwin' || matrix.os == 'windows'
+        run: test -s source/apps/desktop/internal/updates/github_token || { echo "::error::updater token embed file is empty"; exit 1; }
       - name: Verify packaged payload
         working-directory: source/apps/desktop
         run: python3 build/verify-package.py --platform '${{ matrix.os }}' --arch '${{ matrix.arch }}'
